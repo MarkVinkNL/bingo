@@ -10,22 +10,18 @@ use Illuminate\Support\Facades\Hash;
 class AdminUserSeeder extends Seeder
 {
     /**
-     * Default admin credentials for Filament panel access.
-     */
-    public const DEFAULT_EMAIL = 'mark@studionox.nl';
-
-    public const DEFAULT_PASSWORD = 'password';
-
-    /**
      * Run the database seeds.
      */
     public function run(): void
     {
+        $email = config('seeding.superadmin_email');
+        $password = config('seeding.superadmin_password');
+
         User::updateOrCreate(
-            ['email' => self::DEFAULT_EMAIL],
+            ['email' => $email],
             [
-                'name' => 'Admin',
-                'password' => Hash::make(self::DEFAULT_PASSWORD),
+                'name' => 'Super Admin',
+                'password' => Hash::make($password),
                 'role' => UserRole::Superadmin,
             ]
         );
