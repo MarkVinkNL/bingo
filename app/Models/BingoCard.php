@@ -16,6 +16,7 @@ class BingoCard extends Model
         'bingo_subject_id',
         'grid_size',
         'generated_at',
+        'completed_at',
         'share_token',
     ];
 
@@ -23,7 +24,13 @@ class BingoCard extends Model
     {
         return [
             'generated_at' => 'datetime',
+            'completed_at' => 'datetime',
         ];
+    }
+
+    public function isCompleted(): bool
+    {
+        return $this->completed_at !== null;
     }
 
     protected static function booted(): void

@@ -27,8 +27,18 @@ class User extends Authenticatable implements FilamentUser
         'name',
         'email',
         'password',
+        'oauth_provider',
         'role',
     ];
+
+    /**
+     * Whether this user signs in via an OAuth provider (e.g. Google, GitHub).
+     * Such users typically should not edit password in settings.
+     */
+    public function usesOAuth(): bool
+    {
+        return $this->oauth_provider !== null && $this->oauth_provider !== '';
+    }
 
     /**
      * The attributes that should be hidden for serialization.

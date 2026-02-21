@@ -16,6 +16,8 @@ class BingoCardPlayer extends Component
 
     public ?BingoCard $card = null;
 
+    public bool $showShareModal = false;
+
     public function mount(): void
     {
         if (request()->route() && request()->route()->hasParameter('uuid')) {
@@ -40,6 +42,7 @@ class BingoCardPlayer extends Component
 
     /**
      * Toggle the marked state of a cell by position (0 .. grid_size² - 1).
+     * No-op when the card is completed (view-only).
      */
     public function toggleCell(int $position): void
     {
@@ -49,6 +52,10 @@ class BingoCardPlayer extends Component
 
         if ($card === null) {
             abort(404);
+        }
+
+        if ($card->isCompleted()) {
+            return;
         }
 
         $this->authorize('update', $card);
@@ -71,16 +78,19 @@ class BingoCardPlayer extends Component
         $this->card = $card->load(['bingoCardCells.bingoCellValue', 'bingoSubject']);
 
         if (app(BingoDetector::class)->hasBingo($this->card)) {
+            $this->card->update(['completed_at' => now()]);
+            $this->card->refresh();
             $this->dispatch('bingo');
         }
     }
 
     /**
      * Regenerate the share token (invalidates the previous share link).
+     * No-op when the card is completed (view-only).
      */
     public function regenerateShareToken(): void
     {
-        if ($this->card === null) {
+        if ($this->card === null || $this->card->isCompleted()) {
             return;
         }
 

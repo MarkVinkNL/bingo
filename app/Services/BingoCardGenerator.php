@@ -56,6 +56,8 @@ class BingoCardGenerator
     {
         $existing = BingoCard::where('user_id', $userId)
             ->where('bingo_subject_id', $subject->id)
+            ->whereNull('completed_at')
+            ->latest('generated_at')
             ->first();
 
         if ($existing !== null) {

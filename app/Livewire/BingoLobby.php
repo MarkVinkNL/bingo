@@ -32,6 +32,8 @@ class BingoLobby extends Component
         $userCards = BingoCard::query()
             ->where('user_id', Auth::id())
             ->whereIn('bingo_subject_id', $subjects->pluck('id'))
+            ->whereNull('completed_at')
+            ->latest('generated_at')
             ->get()
             ->keyBy('bingo_subject_id');
 

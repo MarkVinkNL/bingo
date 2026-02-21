@@ -33,7 +33,7 @@ class SocialiteController extends Controller
         }
 
         $socialiteUser = Socialite::driver($provider)->user();
-        $user = $this->findOrCreateUser($socialiteUser);
+        $user = $this->findOrCreateUser($socialiteUser, Str::lower($provider));
 
         Auth::login($user, remember: true);
 
@@ -47,7 +47,7 @@ class SocialiteController extends Controller
         return in_array(Str::lower($provider), self::ALLOWED_PROVIDERS, true);
     }
 
-    private function findOrCreateUser(SocialiteUser $socialiteUser): User
+    private function findOrCreateUser(SocialiteUser $socialiteUser, string $provider): User
     {
         $email = $socialiteUser->getEmail();
         if ($email === null || $email === '') {
@@ -68,6 +68,7 @@ class SocialiteController extends Controller
             'name' => $name,
             'email' => $email,
             'password' => Hash::make(Str::random(32)),
+            'oauth_provider' => $provider,
             'role' => UserRole::Player,
         ]);
     }
