@@ -80,8 +80,31 @@ class BingoCardPlayer extends Component
         if (app(BingoDetector::class)->hasBingo($this->card)) {
             $this->card->update(['completed_at' => now()]);
             $this->card->refresh();
-            $this->dispatch('bingo');
+            $this->js($this->bingoConfettiScript());
         }
+    }
+
+    /**
+     * JavaScript to run the completion confetti (3 bursts). Used by $this->js() so it runs
+     * in the same response cycle and works regardless of wire:navigate or listener setup.
+     */
+    private function bingoConfettiScript(): string
+    {
+        return <<<'JS'
+        (function(){
+          if (typeof window.confetti !== 'function') return;
+          var delay = 280;
+          for (var i = 0; i < 3; i++) {
+            (function(n){
+              var x = 0.25 + Math.random() * 0.5;
+              var y = 0.25 + Math.random() * 0.5;
+              setTimeout(function(){
+                window.confetti({ particleCount: 400, spread: 360, origin: { x: x, y: y }, disableForReducedMotion: true });
+              }, n * delay);
+            })(i);
+          }
+        })();
+        JS;
     }
 
     /**
@@ -97,6 +120,21 @@ class BingoCardPlayer extends Component
         $this->authorize('update', $this->card);
         $this->card->regenerateShareToken();
         $this->card->refresh();
+    }
+
+    /**
+     * Remove (delete) this bingo card and redirect to the lobby.
+     * Works for both active and completed cards; owner only.
+     */
+    public function removeCard(): void
+    {
+        if ($this->card === null) {
+            return;
+        }
+
+        $this->authorize('delete', $this->card);
+        $this->card->delete();
+        $this->redirect(route('bingo.index'), navigate: true);
     }
 
     /**

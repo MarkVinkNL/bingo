@@ -5,12 +5,15 @@ namespace App\Livewire;
 use App\Models\BingoCard;
 use App\Models\BingoSubject;
 use App\Services\BingoCardGenerator;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class BingoLobby extends Component
 {
+    use AuthorizesRequests;
+
     /**
      * Active subjects with grid size label and optional existing card for the current user.
      *
@@ -61,6 +64,21 @@ class BingoLobby extends Component
             ->with('bingoSubject')
             ->orderByDesc('generated_at')
             ->get();
+    }
+
+    /**
+     * Remove a bingo card from the lobby (owner only). List re-renders after delete.
+     */
+    public function removeCard(string $uuid): void
+    {
+        $card = BingoCard::query()->where('uuid', $uuid)->first();
+
+        if ($card === null) {
+            return;
+        }
+
+        $this->authorize('delete', $card);
+        $card->delete();
     }
 
     public function render()

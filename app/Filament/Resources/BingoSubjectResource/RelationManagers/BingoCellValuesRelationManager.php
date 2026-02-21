@@ -34,9 +34,6 @@ class BingoCellValuesRelationManager extends RelationManager
                             return $rule->where('bingo_subject_id', $owner->getKey());
                         }
                     ),
-                TextInput::make('sort_order')
-                    ->numeric()
-                    ->default(0),
             ]);
     }
 
@@ -44,15 +41,12 @@ class BingoCellValuesRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('value')
+            ->defaultPaginationPageOption(50)
             ->columns([
                 TextColumn::make('value')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('sort_order')
-                    ->sortable()
-                    ->numeric(),
             ])
-            ->reorderable('sort_order')
             ->headerActions([
                 CreateAction::make(),
                 Action::make('bulkAdd')
@@ -68,15 +62,13 @@ class BingoCellValuesRelationManager extends RelationManager
                     ->action(function (array $data): void {
                         $owner = $this->getOwnerRecord();
                         $lines = array_values(array_filter(array_map('trim', explode("\n", $data['values'] ?? ''))));
-                        $maxOrder = (int) $owner->bingoCellValues()->max('sort_order') ?? -1;
                         $existing = $owner->bingoCellValues()->pluck('value')->map(fn ($v) => strtolower($v))->flip();
-                        foreach ($lines as $i => $line) {
+                        foreach ($lines as $line) {
                             if ($line === '' || $existing->has(strtolower($line))) {
                                 continue;
                             }
                             $owner->bingoCellValues()->create([
                                 'value' => $line,
-                                'sort_order' => $maxOrder + 1 + $i,
                             ]);
                             $existing->put(strtolower($line), true);
                         }

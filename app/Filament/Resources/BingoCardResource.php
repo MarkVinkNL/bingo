@@ -94,6 +94,7 @@ class BingoCardResource extends Resource
                         );
                     }),
             ])
+            ->defaultPaginationPageOption(50)
             ->defaultSort('generated_at', 'desc')
             ->recordActions([
                 \Filament\Actions\ViewAction::make(),

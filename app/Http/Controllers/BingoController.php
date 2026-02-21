@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BingoCard;
 use App\Models\BingoSubject;
 use App\Services\BingoCardGenerator;
+use App\Services\BingoDetector;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -49,8 +50,13 @@ class BingoController extends Controller
             abort(404);
         }
 
+        $completedBingoLines = $card->bingoCardCells->isNotEmpty()
+            ? app(BingoDetector::class)->getCompletedLineLabels($card)
+            : [];
+
         return view('bingo.shared-card', [
             'card' => $card,
+            'completedBingoLines' => $completedBingoLines,
         ]);
     }
 }

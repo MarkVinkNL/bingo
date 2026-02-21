@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'password.available' => \App\Http\Middleware\EnsureUserCanChangePassword::class,
+            'ensure.not.blocked' => \App\Http\Middleware\EnsureUserNotBlocked::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

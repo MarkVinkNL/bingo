@@ -24,7 +24,7 @@ class BingoSubject extends Model
 
     public function bingoCellValues(): HasMany
     {
-        return $this->hasMany(BingoCellValue::class)->orderBy('sort_order');
+        return $this->hasMany(BingoCellValue::class);
     }
 
     public function bingoCards(): HasMany

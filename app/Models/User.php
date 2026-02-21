@@ -29,6 +29,7 @@ class User extends Authenticatable implements FilamentUser
         'password',
         'oauth_provider',
         'role',
+        'blocked',
     ];
 
     /**
@@ -63,6 +64,7 @@ class User extends Authenticatable implements FilamentUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'blocked' => 'boolean',
         ];
     }
 
@@ -81,12 +83,21 @@ class User extends Authenticatable implements FilamentUser
         return $this->role === UserRole::Admin;
     }
 
+    public function isBlocked(): bool
+    {
+        return (bool) $this->blocked;
+    }
+
     /**
      * Whether this user can access the Filament admin panel.
      * Only admin and superadmin roles may access.
      */
     public function canAccessPanel(Panel $panel): bool
     {
+        if ($this->isBlocked()) {
+            return false;
+        }
+
         return $this->role?->canAccessPanel() ?? false;
     }
 

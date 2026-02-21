@@ -14,7 +14,7 @@ Route::get('/bingo/shared/{uuid}/{token}', [BingoController::class, 'showShared'
     ->whereUuid('uuid')
     ->name('bingo.card.shared');
 
-Route::middleware(['auth', 'verified'])->prefix('bingo')->name('bingo.')->group(function (): void {
+Route::middleware(['auth', 'verified', 'ensure.not.blocked'])->prefix('bingo')->name('bingo.')->group(function (): void {
     Route::get('/', BingoLobby::class)->name('index');
     Route::get('/play/{subject}', [BingoController::class, 'play'])->name('play');
     Route::get('/card/{uuid}', BingoCardPlayer::class)

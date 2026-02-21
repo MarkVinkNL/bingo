@@ -41,11 +41,11 @@ class BingoCardPolicy
     }
 
     /**
-     * Determine whether the user can delete the model.
+     * Determine whether the user can delete the model (owner only).
      */
     public function delete(User $user, BingoCard $bingoCard): bool
     {
-        return false;
+        return $bingoCard->user_id !== null && $bingoCard->user_id === $user->id;
     }
 
     /**

@@ -69,6 +69,7 @@ class BingoSubjectResource extends Resource
                     ->boolean()
                     ->label('Active'),
             ])
+            ->defaultPaginationPageOption(50)
             ->defaultSort('name')
             ->recordActions([
                 \Filament\Actions\EditAction::make(),

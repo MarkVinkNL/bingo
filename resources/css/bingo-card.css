@@ -1,0 +1,60 @@
+/**
+ * Bingo card styles
+ * Grid and cell appearance; 4px black dividers, no rounded cells.
+ */
+
+.bingo-card {
+    @apply relative;
+    margin: 3rem 0;
+    max-height: 60vh;
+    max-width: 60vh;
+    aspect-ratio: 1 / 1;
+
+    &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        background-color: rgba(0, 0, 0, 0.5);
+        scale: 1.05;
+        filter: blur(10px);
+        rotate: 0.5deg;
+        transform: skew(1deg);
+        opacity: 0.15;
+    }
+}
+
+.bingo-card__grid {
+    @apply inline-grid gap-[4px] bg-black p-[4px];
+    width: 100%;
+    height: 100%;
+    border: 2rem solid white;
+    outline: 1px solid #ccc;
+}
+
+.bingo-card__cell {
+    @apply flex min-h-[4rem] items-center justify-center p-4 text-center text-sm font-medium;
+}
+
+.bingo-card__cell--default {
+    @apply bg-neutral-50 dark:bg-white/5;
+}
+
+.bingo-card__cell--marked {
+    @apply bg-blue-50 text-green-800 dark:bg-green-500/20 dark:text-green-400;
+}
+
+.bingo-card__cell--interactive {
+    @apply cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-zinc-900;
+}
+
+.bingo-card__cell--interactive.bingo-card__cell--default:hover {
+    @apply bg-neutral-200 dark:bg-white/10;
+}
+
+.bingo-card__cell-check {
+    @apply ms-1 text-green-600 dark:text-green-400;
+}
