@@ -1,0 +1,10 @@
+parameters:
+    paths:
+        - app
+        - database/factories
+        - database/seeders
+    excludePaths:
+        - vendor
+        - storage
+        - bootstrap/cache
+    level: 5

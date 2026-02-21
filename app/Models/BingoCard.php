@@ -1,0 +1,87 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
+
+class BingoCard extends Model
+{
+    use HasFactory;
+    protected $fillable = [
+        'uuid',
+        'bingo_subject_id',
+        'grid_size',
+        'generated_at',
+        'share_token',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'generated_at' => 'datetime',
+        ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (BingoCard $card): void {
+            if (empty($card->uuid)) {
+                $card->uuid = (string) Str::uuid();
+            }
+        });
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
+
+    public function bingoSubject(): BelongsTo
+    {
+        return $this->belongsTo(BingoSubject::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function bingoCardCells(): HasMany
+    {
+        return $this->hasMany(BingoCardCell::class)->orderBy('position');
+    }
+
+    /**
+     * Ensure the card has a share token (create one if missing). Returns the token.
+     */
+    public function ensureShareToken(): string
+    {
+        if (empty($this->share_token)) {
+            $this->update(['share_token' => Str::random(48)]);
+        }
+
+        return $this->share_token;
+    }
+
+    /**
+     * Regenerate the share token (invalidates previous share link).
+     */
+    public function regenerateShareToken(): string
+    {
+        $this->update(['share_token' => Str::random(48)]);
+
+        return $this->share_token;
+    }
+
+    /**
+     * Check if this card can be viewed with the given share token.
+     */
+    public function isValidShareToken(?string $token): bool
+    {
+        return $token !== null && $this->share_token !== null && hash_equals($this->share_token, $token);
+    }
+}
