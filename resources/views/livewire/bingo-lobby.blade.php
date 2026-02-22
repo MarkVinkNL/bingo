@@ -1,8 +1,15 @@
 <div class="flex h-full w-full flex-1 flex-col gap-6 rounded-xl">
 
-  @if ($myCards->isNotEmpty())
+  @if ($myCards->isNotEmpty() || $pendingBattleInvites->isNotEmpty())
     <section>
-      <flux:heading size="xl" level="2" class="mb-3">{{ __('My Bingo cards') }}</flux:heading>
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <flux:heading size="xl" level="2" class="m-0">{{ __('My Bingo cards') }}</flux:heading>
+        @can('create', \App\Models\BingoBattle::class)
+          <flux:button variant="outline" icon="bolt" wire:click="openCreateBattleModal">
+            {{ __('Start a battle') }}
+          </flux:button>
+        @endcan
+      </div>
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         @foreach ($myCards as $card)
           <div wire:key="card-{{ $card->uuid }}"
@@ -13,6 +20,9 @@
               </flux:heading>
               @if ($card->isCompleted())
                 <flux:badge color="green" size="sm">{{ __('Completed') }}</flux:badge>
+              @endif
+              @if ($card->battle_id)
+                <flux:badge color="zinc" size="sm">{{ __('Battle') }}</flux:badge>
               @endif
             </a>
 
@@ -34,7 +44,34 @@
             </div>
           </div>
         @endforeach
+        @foreach ($pendingBattleInvites as $invite)
+          <div wire:key="invite-{{ $invite->id }}" role="button" tabindex="0"
+            class="flex flex-col gap-3 rounded-xl border border-amber-200 p-4 dark:border-amber-700/50 transition-colors hover:border-amber-300 hover:bg-amber-50/50 dark:hover:border-amber-600 dark:hover:bg-amber-900/20 cursor-pointer"
+            wire:click="openInviteModal({{ $invite->id }})">
+            <div class="flex items-start justify-between gap-2">
+              <flux:heading size="lg" level="3" class="min-w-0 flex-1">
+                {{ $invite->bingoBattle->bingoSubject->name ?? __('Bingo') }}
+              </flux:heading>
+              <flux:badge color="amber" size="sm">{{ __('Battle invite') }}</flux:badge>
+            </div>
+            <flux:text variant="subtle" class="text-sm">
+              {{ __('From :name', ['name' => $invite->bingoBattle->createdBy->name ?? '']) }}
+            </flux:text>
+          </div>
+        @endforeach
       </div>
+    </section>
+  @else
+    <section>
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <flux:heading size="xl" level="2" class="m-0">{{ __('My Bingo cards') }}</flux:heading>
+        @can('create', \App\Models\BingoBattle::class)
+          <flux:button variant="outline" icon="bolt" wire:click="openCreateBattleModal">
+            {{ __('Start a battle') }}
+          </flux:button>
+        @endcan
+      </div>
+      <flux:text variant="subtle">{{ __('You have no bingo cards yet. Make one below or accept a battle invite.') }}</flux:text>
     </section>
   @endif
 
@@ -132,6 +169,87 @@
           </flux:button>
         </div>
       </form>
+    @endif
+  </flux:modal>
+
+  <flux:modal name="create-battle" wire:model="showCreateBattleModal" class="sm:max-w-lg">
+    <div class="flex flex-col gap-4">
+      <flux:heading size="lg" level="2">{{ __('Start a battle') }}</flux:heading>
+      @if ($createBattleStep === 1)
+        <flux:text variant="subtle">{{ __('Choose a bingo subject for the battle.') }}</flux:text>
+        <flux:field>
+          <flux:label for="battle-subject">{{ __('Subject') }}</flux:label>
+          <flux:select id="battle-subject" wire:model="selectedBattleSubjectId" placeholder="{{ __('Select subject') }}">
+            @foreach ($battleSubjects as $subject)
+              <flux:select.option value="{{ $subject->id }}">{{ $subject->name }}</flux:select.option>
+            @endforeach
+          </flux:select>
+          <flux:error name="selectedBattleSubjectId" />
+        </flux:field>
+        <div class="flex flex-wrap justify-end gap-2">
+          <flux:button variant="ghost" wire:click="closeCreateBattleModal">{{ __('Cancel') }}</flux:button>
+          <flux:button variant="primary" wire:click="createBattleNextStep">{{ __('Next') }}</flux:button>
+        </div>
+      @else
+        <flux:text variant="subtle">{{ __('Select friends to invite.') }}</flux:text>
+        <flux:field>
+          <flux:label>{{ __('Friends') }}</flux:label>
+          @if ($friends->isEmpty())
+            <flux:text variant="subtle">{{ __('You have no friends yet. Add friends from the menu to invite them to battles.') }}</flux:text>
+          @else
+            <div class="flex flex-col gap-2 max-h-64 overflow-y-auto">
+              @foreach ($friends as $friend)
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <flux:checkbox wire:model="selectedBattleFriendIds" value="{{ $friend->id }}" />
+                  <flux:avatar :name="$friend->name" size="sm" />
+                  <flux:text>{{ $friend->name }}</flux:text>
+                </label>
+              @endforeach
+            </div>
+          @endif
+        </flux:field>
+        <div class="flex flex-wrap justify-end gap-2">
+          <flux:button variant="ghost" wire:click="createBattlePrevStep">{{ __('Back') }}</flux:button>
+          <flux:button variant="ghost" wire:click="closeCreateBattleModal">{{ __('Cancel') }}</flux:button>
+          <flux:button variant="primary" wire:click="createBattle" wire:loading.attr="disabled">
+            {{ __('Create battle') }}
+          </flux:button>
+        </div>
+      @endif
+    </div>
+  </flux:modal>
+
+  <flux:modal name="battle-invite" wire:model="showInviteModal" class="sm:max-w-md">
+    @if ($inviteForModal)
+      <div class="flex flex-col gap-4">
+        <flux:heading size="lg" level="2">{{ __('Battle invite') }}</flux:heading>
+        <flux:text variant="subtle">
+          <strong>{{ $inviteForModal->bingoBattle->createdBy->name }}</strong>
+          {{ __('invited you to a bingo battle.') }}
+        </flux:text>
+        <div>
+          <flux:heading size="sm" level="3" class="mb-2">{{ __('Subject') }}</flux:heading>
+          <flux:text>{{ $inviteForModal->bingoBattle->bingoSubject->name }}</flux:text>
+        </div>
+        <div>
+          <flux:heading size="sm" level="3" class="mb-2">{{ __('Participants') }}</flux:heading>
+          <ul class="list-disc list-inside space-y-1">
+            <li><flux:text>{{ $inviteForModal->bingoBattle->createdBy->name }} ({{ __('Creator') }})</flux:text></li>
+            @foreach ($inviteForModal->bingoBattle->invites as $inv)
+              <li><flux:text>{{ $inv->user->name ?? '' }}</flux:text></li>
+            @endforeach
+          </ul>
+        </div>
+        <div class="flex flex-wrap justify-end gap-2">
+          <flux:button variant="ghost" wire:click="closeInviteModal">{{ __('Close') }}</flux:button>
+          <flux:button variant="outline" color="red" wire:click="declineInvite({{ $inviteForModal->id }})">
+            {{ __('Decline') }}
+          </flux:button>
+          <flux:button variant="primary" wire:click="acceptInvite({{ $inviteForModal->id }})" wire:loading.attr="disabled">
+            {{ __('Accept') }}
+          </flux:button>
+        </div>
+      </div>
     @endif
   </flux:modal>
 </div>

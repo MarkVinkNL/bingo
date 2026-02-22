@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\BingoBattle;
 use App\Models\BingoCard;
 use App\Models\BingoSubject;
 use Illuminate\Support\Carbon;
@@ -76,6 +77,42 @@ class BingoCardGenerator
 
         $card = new BingoCard([
             'bingo_subject_id' => $subject->id,
+            'grid_size' => $gridSize,
+            'generated_at' => Carbon::now(),
+        ]);
+        $card->user_id = $userId;
+        $card->save();
+
+        foreach ($cellValueIds as $position => $bingoCellValueId) {
+            $card->bingoCardCells()->create([
+                'bingo_cell_value_id' => $bingoCellValueId,
+                'position' => $position,
+                'is_marked' => false,
+            ]);
+        }
+
+        return $card->load('bingoCardCells');
+    }
+
+    /**
+     * Generate a new card for a battle (always creates a new card, never reuses).
+     * Used when creating a battle (creator) or when a friend accepts an invite.
+     */
+    public function generateCardForBattle(BingoSubject $subject, int $userId, BingoBattle $battle): BingoCard
+    {
+        $subject->loadCount('bingoCellValues');
+        if ($subject->bingo_cell_values_count < 1) {
+            throw new \InvalidArgumentException('Subject must have at least 1 cell value.');
+        }
+
+        $cellCount = $subject->bingo_cell_values_count;
+        $gridSize = $this->resolveGridSize($cellCount);
+        $cellsNeeded = $gridSize * $gridSize;
+        $cellValueIds = $this->selectCellValueIds($subject, $cellsNeeded);
+
+        $card = new BingoCard([
+            'bingo_subject_id' => $subject->id,
+            'battle_id' => $battle->id,
             'grid_size' => $gridSize,
             'generated_at' => Carbon::now(),
         ]);

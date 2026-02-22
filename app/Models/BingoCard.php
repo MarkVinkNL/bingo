@@ -14,6 +14,7 @@ class BingoCard extends Model
     protected $fillable = [
         'uuid',
         'bingo_subject_id',
+        'battle_id',
         'grid_size',
         'generated_at',
         'completed_at',
@@ -57,6 +58,11 @@ class BingoCard extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function battle(): BelongsTo
+    {
+        return $this->belongsTo(BingoBattle::class, 'battle_id');
+    }
+
     public function bingoCardCells(): HasMany
     {
         return $this->hasMany(BingoCardCell::class)->orderBy('position');
@@ -68,10 +74,12 @@ class BingoCard extends Model
     public function ensureShareToken(): string
     {
         if (empty($this->share_token)) {
-            $this->update(['share_token' => Str::random(48)]);
+            $token = Str::random(48);
+            $this->update(['share_token' => $token]);
+            $this->share_token = $token;
         }
 
-        return $this->share_token;
+        return $this->share_token ?? '';
     }
 
     /**
@@ -79,9 +87,11 @@ class BingoCard extends Model
      */
     public function regenerateShareToken(): string
     {
-        $this->update(['share_token' => Str::random(48)]);
+        $token = Str::random(48);
+        $this->update(['share_token' => $token]);
+        $this->share_token = $token;
 
-        return $this->share_token;
+        return $token;
     }
 
     /**

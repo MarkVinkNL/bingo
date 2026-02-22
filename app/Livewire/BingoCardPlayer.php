@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Models\BingoBattle;
 use App\Models\BingoCard;
 use App\Services\BingoDetector;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -81,6 +82,16 @@ class BingoCardPlayer extends Component
             $this->card->update(['completed_at' => now()]);
             $this->card->refresh();
             $this->js($this->bingoConfettiScript());
+
+            if ($this->card->battle_id !== null) {
+                $battle = BingoBattle::query()->find($this->card->battle_id);
+                if ($battle !== null && $battle->winner_id === null) {
+                    $battle->update([
+                        'winner_id' => $this->card->user_id,
+                        'won_at' => now(),
+                    ]);
+                }
+            }
         }
     }
 
@@ -165,11 +176,83 @@ class BingoCardPlayer extends Component
         return app(BingoDetector::class)->getCompletedLineLabels($this->card);
     }
 
+    /**
+     * Other participants' cards for battle sidebar (simplified: grid_size + position => is_marked).
+     * Only when this card is part of a battle; excludes current user's card.
+     *
+     * @return array<int, array{userName: string, gridSize: int, cells: array<int, bool>, isWinner: bool}>
+     */
+    public function getOtherParticipantCards(): array
+    {
+        if ($this->card === null || $this->card->battle_id === null) {
+            return [];
+        }
+
+        $battle = BingoBattle::query()->with('winner')->find($this->card->battle_id);
+        if ($battle === null) {
+            return [];
+        }
+
+        $currentUserId = (int) auth()->id();
+        $winnerId = $battle->winner_id;
+
+        $creatorCard = BingoCard::query()
+            ->where('battle_id', $battle->id)
+            ->where('user_id', $battle->created_by)
+            ->with(['bingoCardCells', 'user'])
+            ->first();
+
+        $inviteeCardIds = $battle->invites()->accepted()->whereNotNull('bingo_card_id')->pluck('bingo_card_id');
+        $inviteeCards = BingoCard::query()
+            ->whereIn('id', $inviteeCardIds)
+            ->with(['bingoCardCells', 'user'])
+            ->get();
+
+        $result = [];
+        if ($creatorCard !== null && $creatorCard->user_id !== $currentUserId) {
+            $result[] = [
+                'userName' => $creatorCard->user?->name ?? __('Creator'),
+                'gridSize' => $creatorCard->grid_size,
+                'cells' => $creatorCard->bingoCardCells->keyBy('position')->map(fn ($c) => $c->is_marked)->all(),
+                'isWinner' => $winnerId !== null && $creatorCard->user_id === $winnerId,
+            ];
+        }
+        foreach ($inviteeCards as $card) {
+            if ($card->user_id === $currentUserId) {
+                continue;
+            }
+            $result[] = [
+                'userName' => $card->user?->name ?? '',
+                'gridSize' => $card->grid_size,
+                'cells' => $card->bingoCardCells->keyBy('position')->map(fn ($c) => $c->is_marked)->all(),
+                'isWinner' => $winnerId !== null && $card->user_id === $winnerId,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Battle winner (when this card is in a battle that has been won). Null if not a battle or no winner yet.
+     */
+    public function getBattleWinner(): ?\App\Models\User
+    {
+        if ($this->card === null || $this->card->battle_id === null) {
+            return null;
+        }
+
+        $battle = BingoBattle::query()->with('winner')->find($this->card->battle_id);
+
+        return $battle?->winner;
+    }
+
     public function render()
     {
         return view('livewire.bingo-card-player', [
             'completedBingoLines' => $this->getCompletedBingoLines(),
             'shareUrl' => $this->getShareUrl(),
+            'otherParticipantCards' => $this->getOtherParticipantCards(),
+            'battleWinner' => $this->getBattleWinner(),
         ])->layout('layouts.app', ['title' => $this->card?->bingoSubject?->name ?? __('Bingo Card')]);
     }
 }

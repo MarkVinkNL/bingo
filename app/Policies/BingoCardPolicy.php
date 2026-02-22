@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\BingoCard;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class BingoCardPolicy
 {
@@ -17,11 +16,28 @@ class BingoCardPolicy
     }
 
     /**
-     * Determine whether the user can view the model (owner only).
+     * Determine whether the user can view the model (owner or battle participant).
      */
     public function view(User $user, BingoCard $bingoCard): bool
     {
-        return $bingoCard->user_id !== null && $bingoCard->user_id === $user->id;
+        if ($bingoCard->user_id !== null && $bingoCard->user_id === $user->id) {
+            return true;
+        }
+
+        if ($bingoCard->battle_id === null) {
+            return false;
+        }
+
+        $battle = $bingoCard->battle;
+        if ($battle === null) {
+            return false;
+        }
+
+        if ($battle->created_by === $user->id) {
+            return true;
+        }
+
+        return $battle->invites()->where('user_id', $user->id)->accepted()->exists();
     }
 
     /**

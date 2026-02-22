@@ -31,4 +31,9 @@ class BingoSubject extends Model
     {
         return $this->hasMany(BingoCard::class);
     }
+
+    public function bingoBattles(): HasMany
+    {
+        return $this->hasMany(BingoBattle::class);
+    }
 }

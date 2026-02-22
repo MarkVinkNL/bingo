@@ -58,3 +58,18 @@
 .bingo-card__cell-check {
     @apply ms-1 text-green-600 dark:text-green-400;
 }
+
+/* Mini card for battle sidebar (status only, no text) */
+.bingo-card--mini {
+    max-height: 20vh;
+    max-width: 20vh;
+    margin: 0;
+}
+
+.bingo-card--mini .bingo-card__grid {
+    border-width: 0.5rem;
+}
+
+.bingo-card--mini .bingo-card__cell {
+    @apply min-h-[1.5rem] p-1 text-xs;
+}

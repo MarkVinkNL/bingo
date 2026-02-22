@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\UserRole;
+use App\Models\BingoBattleInvite;
 use App\Models\Friend;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -73,6 +74,16 @@ class User extends Authenticatable implements FilamentUser
     public function bingoCards(): HasMany
     {
         return $this->hasMany(BingoCard::class);
+    }
+
+    public function bingoBattlesCreated(): HasMany
+    {
+        return $this->hasMany(BingoBattle::class, 'created_by');
+    }
+
+    public function bingoBattleInvites(): HasMany
+    {
+        return $this->hasMany(BingoBattleInvite::class);
     }
 
     public function friendshipsSent(): HasMany
