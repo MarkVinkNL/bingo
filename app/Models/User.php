@@ -4,10 +4,12 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\UserRole;
+use App\Models\Friend;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
@@ -71,6 +73,41 @@ class User extends Authenticatable implements FilamentUser
     public function bingoCards(): HasMany
     {
         return $this->hasMany(BingoCard::class);
+    }
+
+    public function friendshipsSent(): HasMany
+    {
+        return $this->hasMany(Friend::class, 'sender_id');
+    }
+
+    public function friendshipsReceived(): HasMany
+    {
+        return $this->hasMany(Friend::class, 'receiver_id');
+    }
+
+    /**
+     * Users that are friends with this user (accepted only), excluding blocked users.
+     *
+     * @return Collection<int, User>
+     */
+    public function friends(): Collection
+    {
+        $ids = Friend::query()
+            ->where('status', \App\Enums\FriendStatus::Accepted)
+            ->where(function ($q) {
+                $q->where('sender_id', $this->id)->orWhere('receiver_id', $this->id);
+            })
+            ->get()
+            ->map(fn (Friend $f) => $f->sender_id === $this->id ? $f->receiver_id : $f->sender_id)
+            ->unique()
+            ->values()
+            ->all();
+
+        return User::query()
+            ->whereIn('id', $ids)
+            ->where('blocked', false)
+            ->orderBy('name')
+            ->get();
     }
 
     public function isSuperadmin(): bool

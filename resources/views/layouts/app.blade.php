@@ -4,4 +4,7 @@
             {{ $slot }}
         </div>
     </flux:main>
+    @auth
+        <livewire:friendlist-button />
+    @endauth
 </x-layouts::app.header>
