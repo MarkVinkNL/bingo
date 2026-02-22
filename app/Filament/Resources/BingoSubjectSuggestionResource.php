@@ -36,6 +36,8 @@ class BingoSubjectSuggestionResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'suggested_name';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function getSlug(?Panel $panel = null): string
     {
         return 'subject-suggestions';

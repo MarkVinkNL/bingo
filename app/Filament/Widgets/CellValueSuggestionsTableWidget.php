@@ -1,67 +1,33 @@
 <?php
 
-namespace App\Filament\Resources;
+namespace App\Filament\Widgets;
 
-use App\Filament\Resources\BingoCellValueSuggestionResource\Pages\EditBingoCellValueSuggestion;
-use App\Filament\Resources\BingoCellValueSuggestionResource\Pages\ListBingoCellValueSuggestions;
-use App\Filament\Resources\BingoCellValueSuggestionResource\Pages\ViewBingoCellValueSuggestion;
-use App\Filament\Resources\BingoCellValueSuggestionResource\RelationManagers\SuggestionValuesRelationManager;
+use App\Filament\Resources\BingoCellValueSuggestionResource;
+use App\Filament\Resources\BingoSubjectResource;
 use App\Models\BingoCellValue;
 use App\Models\BingoCellValueSuggestion;
-use BackedEnum;
 use Filament\Actions\Action;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Resources\Resource;
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Filament\Panel;
+use Filament\Widgets\TableWidget as BaseTableWidget;
+use Illuminate\Database\Eloquent\Builder;
 
-class BingoCellValueSuggestionResource extends Resource
+class CellValueSuggestionsTableWidget extends BaseTableWidget
 {
-    protected static ?string $model = BingoCellValueSuggestion::class;
+    protected static ?string $heading = 'New cell value suggestions';
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-pencil-square';
+    protected int | string | array $columnSpan = 'full';
 
-    protected static ?string $navigationLabel = 'Cell value suggestions';
+    protected static ?int $sort = 2;
 
-    protected static ?string $modelLabel = 'Cell value suggestion';
-
-    protected static ?string $pluralModelLabel = 'Cell value suggestions';
-
-    protected static ?string $recordTitleAttribute = 'id';
-
-    protected static bool $shouldRegisterNavigation = false;
-
-    public static function getSlug(?Panel $panel = null): string
-    {
-        return 'cell-value-suggestions';
-    }
-
-    public static function getRecordTitle(?\Illuminate\Database\Eloquent\Model $record): \Illuminate\Contracts\Support\Htmlable|string|null
-    {
-        if ($record === null) {
-            return null;
-        }
-
-        return "Suggestions for {$record->bingoSubject->name}";
-    }
-
-    public static function form(Schema $schema): Schema
-    {
-        return $schema->components([]);
-    }
-
-    public static function table(Table $table): Table
+    public function table(Table $table): Table
     {
         return $table
             ->columns([
                 TextColumn::make('bingoSubject.name')
                     ->label('Subject')
                     ->url(fn (BingoCellValueSuggestion $record): string => BingoSubjectResource::getUrl('edit', ['record' => $record->bingoSubject]))
-                    ->searchable()
                     ->sortable(),
                 TextColumn::make('status')
                     ->badge()
@@ -78,7 +44,6 @@ class BingoCellValueSuggestionResource extends Resource
                     ->sortable(),
                 TextColumn::make('user.name')
                     ->label('Suggested by')
-                    ->searchable()
                     ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
@@ -90,16 +55,19 @@ class BingoCellValueSuggestionResource extends Resource
                         BingoCellValueSuggestion::STATUS_PENDING => 'Pending',
                         BingoCellValueSuggestion::STATUS_APPROVED => 'Approved',
                         BingoCellValueSuggestion::STATUS_REJECTED => 'Rejected',
-                    ]),
+                    ])
+                    ->default(BingoCellValueSuggestion::STATUS_PENDING),
                 SelectFilter::make('bingo_subject_id')
                     ->relationship('bingoSubject', 'name')
                     ->label('Subject'),
             ])
-            ->defaultPaginationPageOption(25)
+            ->defaultPaginationPageOption(10)
             ->defaultSort('created_at', 'desc')
             ->recordActions([
-                \Filament\Actions\ViewAction::make(),
-                \Filament\Actions\EditAction::make(),
+                \Filament\Actions\ViewAction::make()
+                    ->url(fn (BingoCellValueSuggestion $record): string => BingoCellValueSuggestionResource::getUrl('view', ['record' => $record])),
+                \Filament\Actions\EditAction::make()
+                    ->url(fn (BingoCellValueSuggestion $record): string => BingoCellValueSuggestionResource::getUrl('edit', ['record' => $record])),
                 Action::make('approve')
                     ->label('Approve')
                     ->icon('heroicon-o-check')
@@ -137,58 +105,10 @@ class BingoCellValueSuggestionResource extends Resource
             ]);
     }
 
-    public static function infolist(Schema $schema): Schema
+    protected function getTableQuery(): ?Builder
     {
-        return $schema
-            ->components([
-                TextEntry::make('bingoSubject.name')
-                    ->label('Subject')
-                    ->url(fn (BingoCellValueSuggestion $record): string => BingoSubjectResource::getUrl('edit', ['record' => $record->bingoSubject])),
-                TextEntry::make('status')->label('Status')->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        BingoCellValueSuggestion::STATUS_PENDING => 'warning',
-                        BingoCellValueSuggestion::STATUS_APPROVED => 'success',
-                        BingoCellValueSuggestion::STATUS_REJECTED => 'danger',
-                        default => 'gray',
-                    }),
-                TextEntry::make('user.name')->label('Suggested by'),
-                TextEntry::make('created_at')->label('Suggested at')->dateTime(),
-                Section::make('Suggested values')
-                    ->schema([
-                        TextEntry::make('suggestionValues.value')
-                            ->label('')
-                            ->bulleted()
-                            ->listWithLineBreaks(),
-                    ])
-                    ->columns(1),
-            ]);
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            SuggestionValuesRelationManager::class,
-        ];
-    }
-
-    public static function getPages(): array
-    {
-        return [
-            'index' => ListBingoCellValueSuggestions::route('/'),
-            'view' => ViewBingoCellValueSuggestion::route('/{record}'),
-            'edit' => EditBingoCellValueSuggestion::route('/{record}/edit'),
-        ];
-    }
-
-    public static function canCreate(): bool
-    {
-        return false;
-    }
-
-    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
-    {
-        return parent::getEloquentQuery()
+        return BingoCellValueSuggestion::query()
             ->withCount('suggestionValues')
-            ->with(['bingoSubject', 'user', 'suggestionValues']);
+            ->with(['bingoSubject', 'user']);
     }
 }
